@@ -81,41 +81,6 @@ transforms:
 
 ---
 
-# No locking
-
-Multiple threads can access the enrichment tables at any time.
-
-## ArcSwap
-
-- The `ArcSwap` type is a container for an `Arc` that can be changed atomically. 
-- Optimized for read-mostly scenarios, with consistent performance characteristics.
-
---- 
-
-```rust
-type TableMap = HashMap<String, Box<dyn Table + Send + Sync>>;
-
-#[derive(Clone, Default)]
-pub struct TableRegistry {
-    loading: Arc<Mutex<Option<TableMap>>>,
-    tables: Arc<ArcSwap<Option<TableMap>>>,
-}
-```
-
-
-- Load data into `loading`.
-- Swap it into `tables`.
-
-```rust
-    pub fn finish_load(&self) {
-        let mut tables_lock = self.loading.lock().unwrap();
-        let tables = tables_lock.take();
-        self.tables.swap(Arc::new(tables));
-    }
-```
-
----
-
 # Indexes
 
 - Criteria in enrichment tables are AND only.
@@ -124,12 +89,12 @@ pub struct TableRegistry {
 
 On load:
 
-* Each remap function informs the enrichment table which fields it will search on.
-* The enrichment table iterates through each row in the data.
+* Remap function informs the enrichment table the fields it searches on.
+* For each row in the data:
 * Build up a string containing each column in the index.
-* Hash the resulting string using `seahash`.
+* Hash the resulting string using `seahash`:
   > *SeaHash*: A blazingly fast, portable hash function with proven statistical guarantees.
-* Store the hashed value in a hash -> position `HashMap`.
+* Store hashed value in a *hash -> position* `HashMap`.
 
 --- 
 
@@ -177,6 +142,41 @@ This can kill performance.
 
 ---
 
+# No locking
+
+Multiple threads can access the enrichment tables at any time.
+
+## ArcSwap
+
+* Writes using atomics swaps. 
+* Reads are performed lock free.
+
+--- 
+
+```rust
+type TableMap = HashMap<String, Box<dyn Table + Send + Sync>>;
+
+#[derive(Clone, Default)]
+pub struct TableRegistry {
+    loading: Arc<Mutex<Option<TableMap>>>,
+    tables: Arc<ArcSwap<Option<TableMap>>>,
+}
+```
+
+
+- Load data into `loading`.
+- Swap it into `tables`.
+
+```rust
+    pub fn finish_load(&self) {
+        let mut tables_lock = self.loading.lock().unwrap();
+        let tables = tables_lock.take();
+        self.tables.swap(Arc::new(tables));
+    }
+```
+
+---
+
 # Reloading
 
 ```rust
@@ -187,11 +187,18 @@ pub struct TableRegistry {
 ```
 
 * For each table in the config, if that table needs reloading:
-  Load this table
-* For each table in `tables`, if that table is not in the previous list:
-  Clone that table
+  Load this table from the file.
+* For all other tables:
+  Clone that table from `tables`.
 * Set `loading` to this list.
 * Swap `loading` into `tables`.
+
+---
+
+# Where is the source?
+
+- `src/enrichment_tables/`
+- `lib/enrichment/`
 
 ---
 
