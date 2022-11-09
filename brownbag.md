@@ -75,7 +75,7 @@ transforms:
 ---
 
 
-# Requirements for enrichment tables
+# Main Requirements
 
 * Performance
 
@@ -84,6 +84,14 @@ transforms:
 # Indexes
 
 - Criteria in enrichment tables are AND only.
+
+
+```coffee
+  enriched, err = get_enrichment_table_record("file", 
+                                              {"first_name": .first_name,
+                                               "surname": .surname,
+                                              })
+```
 
 --- 
 
@@ -103,7 +111,7 @@ On query:
 ```coffee
   enriched, err = get_enrichment_table_record("file", 
                                               {"first_name": .first_name,
-                                               "surname": .surname
+                                               "surname": .surname,
                                               })
 ```
 
@@ -139,6 +147,12 @@ Dates can't be indexed so can only be included as part of the sequential scan.
 
 This can kill performance.
 </div>
+
+---
+
+# Show me the code!
+
+<img src='./cat.jpg' style="margin-top: 148px;" />
 
 ---
 
@@ -202,4 +216,22 @@ pub struct TableRegistry {
 
 ---
 
+![bg](./future.jpg)
+
+# The Future
+
+* More data sources - json files, sqlite.
+* More comprehensive criteria. OR queries.
+* Async queries
+  - postgresql queries
+  - http calls
+  - K8s api
+* Caching 
+
+---
+
 # Questions?
+
+<div style="text-align: center;"> 
+<img src='./questions.jpg' style="margin-top: 148px;" />
+</div>
